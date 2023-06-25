@@ -10,5 +10,5 @@ FROM scratch
 WORKDIR /app
 COPY --from=build /app/myurls ./
 COPY public/* ./public/
-EXPOSE 8002
+EXPOSE 80
 ENTRYPOINT ["/app/myurls"]
