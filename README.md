@@ -1,32 +1,17 @@
 # MyUrls
 
-基于 Go 1.20 与 Redis 实现的本地短链接服务，用于缩短请求链接与短链接还原。
+基于 Go 1.21 与 Redis 实现的本地短链接服务，用于缩短 URL 与短链接还原。
 
 ## Table of Contents
 
-- [MyUrls](#myurls)
-  - [Table of Contents](#table-of-contents)
-- [Update](#update)
 - [Dependencies](#dependencies)
   - [Docker](#docker)
-  - [Deploy Online](#deploy-online)
-    - [Deploy on Railway](#deploy-on-railway)
-      - [部署](#部署)
-      - [添加域名](#添加域名)
   - [Install](#install)
   - [Usage](#usage)
-  - [API](#api)
+    - [日志清理](#日志清理)
   - [Maintainers](#maintainers)
   - [Contributing](#contributing)
   - [License](#license)
-
-# Update
-
-- 20200330
-  集成前端至根路径，如: <http://127.0.0.1:8002/>。
-
-  > 注：如需使用集成的前端，项目部署请 clone 仓库后自行编译，并在代码根目录启动服务。或者可 nginx 单独配置 root 至 public 目录的 index.html。
-
 
 # Dependencies
 
@@ -46,7 +31,7 @@ sudo apt-get install redis-server -y
 现在你可以无需安装其他服务，使用 docker 或 [docker-compose](https://docs.docker.com/compose/install/) 部署本项目。注：请自行修改 .env 中参数。
 
 ```
-docker run -d --restart always --name myurls careywong/myurls:latest -domain example.com -port 8002 -conn 127.0.0.1:6379 -passwd '' -ttl 90
+docker run -d --restart always --name myurls careywong/myurls:latest -domain example.com -port 8002 -conn 127.0.0.1:6379 -password ''
 ```
 
 ```shell script
@@ -57,25 +42,6 @@ cp .env.example .env
 
 docker-compose up -d
 ```
-## Deploy Online 
-
-### Deploy on Railway
-
-#### 部署
-
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template?template=https%3A%2F%2Fgithub.com%2Fpzcn%2FMyurls-Railway&plugins=redis&envs=ENV_DOMAIN%2CENV_TTL%2CPORT&ENV_DOMAINDesc=Your+domain.&ENV_TTLDesc=Short+link+validity+period+%28day%29&PORTDesc=DO+NOT+CHANGE&ENV_TTLDefault=180&PORTDefault=80)
-
-通过上方链接一键部署到Railway，并填入以下参数
-
-参数说明：
-
-- `DOMAIN` - 短链接域名，必填项，不需要添加https:// (如 abc.com)
-- `TTL` - 短链接有效期，单位(天)，默认180天 (default 180)
-- `PORT` - 端口，保持80，请勿修改
-
-#### 添加域名
-
-在Cloudflare中添加域名，并配置SSL/TLS为完全及以上，并在Railway中接入该域名，参考[官方文档](https://docs.railway.app/deploy/exposing-your-app#lets-encrypt-ssl-certificates)。
 
 ## Install
 
@@ -88,39 +54,55 @@ make install
 生成可执行文件，目录位于 build/ 。默认当前平台，其他平台请参照 Makefile 或执行对应 go build 命令。
 
 ```shell script
-bash release.sh
+make
 ```
 
 ## Usage
 
-前往 [Release](https://github.com/CareyWang/MyUrls/releases) 下载对应平台可执行文件。
+前往 [Actions](https://github.com/CareyWang/MyUrls/actions/workflows/go.yml) 下载对应平台可执行文件。
 
 ```shell script
-./build/linux-amd64-myurls -h 
-
-Usage of ./build/linux-amd64-myurls:
+Usage of ./MyUrls:
   -conn string
-        Redis连接，格式: host:port (default "127.0.0.1:6379")
+        address of the redis server (default "localhost:6379")
   -domain string
-        短链接域名，必填项
-  -passwd string
-        Redis连接密码
-  -port int
-        服务端口 (default 8002)
-  -ttl int
-        短链接有效期，单位(天)，默认180天。 (default 180)
+        domain of the server (default "localhost:8080")
+  -h    display help
+  -password string
+        password of the redis server
+  -port string
+        port to run the server on (default "8080")
+  -proto string
+        protocol of the server (default "https")
 ```
 
 建议配合 [pm2](https://pm2.keymetrics.io/) 开启守护进程。
 
 ```shell script
-pm2 start myurls --watch --name myurls -- -domain example.com
+pm2 start myurls --name myurls -- -domain example.com
 ```
 
-## API
+### 日志清理
 
-[参考文档](https://myurls.mydoc.li)
+假定工作目录为 `/app`，可基于 logrotate 配置应用日志的自动轮转与清理。可参考示例配置，每天轮转一次日志文件，保留最近7天
 
+```shell 
+tee > /etc/logrotate.d/myurls <<EOF
+/app/logs/access.log {
+    daily
+    rotate 7
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+    create 640 root adm
+}
+EOF
+
+# 测试是否正常工作，不会实际执行切割
+logrotate -d /etc/logrotate.d/myurls
+```
 
 ## Maintainers
 
@@ -134,4 +116,4 @@ Small note: If editing the README, please conform to the [standard-readme](https
 
 ## License
 
-MIT © 2020 CareyWang
+MIT © 2024 CareyWang
